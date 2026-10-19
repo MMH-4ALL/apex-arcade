@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f5f1e8" />
+    <meta
+      name="description"
+      content="Apex Arcade — a sun-soaked 3D time attack. Find your line, chase your best, and drive the Qatar circuit."
+    />
+    <title>Apex Arcade — Find your racing line</title>
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+          "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="game" aria-label="Apex Arcade racing game">
+      <canvas
+        id="viewport"
+        tabindex="0"
+        aria-label="3D race circuit. Drive with W A S D or arrow keys. Space to drift, R to respawn, Escape to pause."
+      ></canvas>
+      <div class="vignette" aria-hidden="true"></div>
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Apex Arcade home"
+          ><span class="brand-mark" aria-hidden="true">A<span></span></span
+          ><span>APEX<small>ARCADE</small></span></a
+        >
+        <div class="session-label">
+          <span class="live-dot"></span>TIME ATTACK<span class="slash">/</span
+          ><span id="track-name">QATAR CIRCUIT</span>
+        </div>
+        <nav class="toolbar" aria-label="Game options">
+          <button
+            id="sound-button"
+            class="icon-button"
+            aria-label="Enable engine sound"
+            aria-pressed="false"
+            title="Toggle sound"
+          >
+            ♪<span class="sound-slash" aria-hidden="true"></span>
+          </button>
+          <button
+            id="touch-button"
+            class="icon-button"
+            aria-label="Show touch controls"
+            aria-pressed="false"
+            title="Touch controls"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M7 8h10l4 8c1 3-2 4-4 2l-2-2H9l-2 2c-2 2-5 1-4-2zM6 12h5m-2.5-2.5v5m8-2h.01m2 2h.01"
+              />
+            </svg>
+          </button>
+          <button
+            id="pause-button"
+            class="icon-button"
+            aria-label="Pause game"
+            title="Pause (Esc)"
+            disabled
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 6v12M15 6v12" />
+            </svg>
+          </button>
+        </nav>
+      </header>
+
+      <section
+        id="welcome"
+        class="welcome"
+        aria-labelledby="welcome-title"
+        hidden
+      >
+        <div class="eyebrow"><span></span> PURE DRIVING. NO DISTRACTIONS.</div>
+        <h1 id="welcome-title">FIND YOUR<br />RACING <em>LINE.</em></h1>
+        <p>
+          Sun on the tarmac. Nothing but open track.<br />One car. One circuit.
+          Your next personal best.
+        </p>
+        <button id="start-button" class="primary-button">
+          LET’S DRIVE <span aria-hidden="true">↗</span>
+        </button>
+        <div class="welcome-controls">
+          <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> DRIVE</span
+          ><span><kbd>SPACE</kbd> DRIFT</span>
+        </div>
+        <div class="track-card">
+          <span class="track-number">01</span>
+          <div>
+            <span class="eyebrow">THE CIRCUIT</span
+            ><strong id="circuit-label">Qatar</strong
+            ><small id="circuit-detail">Dry tarmac · Endless laps</small>
+          </div>
+          <svg
+            id="welcome-map"
+            viewBox="0 0 160 110"
+            aria-label="Circuit outline"
+          ></svg>
+        </div>
+      </section>
+
+      <section id="race-hud" aria-label="Race information" hidden>
+        <div class="timing-panel">
+          <div class="lap-label">
+            <span>LAP <b id="lap-number">01</b></span
+            ><span id="lap-valid" class="valid-tag">TIME ATTACK</span>
+          </div>
+          <div id="lap-time" class="lap-time">00:00.000</div>
+          <div class="best-line">
+            <span>PERSONAL BEST</span
+            ><strong id="best-time">— — : — — . — — —</strong>
+          </div>
+          <div class="sector-line">
+            <span id="checkpoint-label">CHECKPOINT 01</span
+            ><span id="checkpoint-total"></span>
+          </div>
+          <div class="progress-track"><span id="lap-progress"></span></div>
+        </div>
+        <div class="minimap-panel">
+          <svg
+            id="minimap"
+            viewBox="0 0 180 150"
+            aria-label="Track map and car position"
+          ></svg
+          ><span id="surface-label">ON THE LINE</span>
+        </div>
+        <div class="speed-panel">
+          <div class="speed-top"><span id="gear">N</span><span>KM/H</span></div>
+          <div id="speed">000</div>
+          <div class="rev-bars" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i
+            ><i></i><i></i><i></i>
+          </div>
+        </div>
+        <div class="race-actions">
+          <button id="reset-button" class="text-button">
+            ↺ <span>RESPAWN</span> <kbd>R</kbd></button
+          ><span class="keyboard-hint"><kbd>SPACE</kbd> HANDBRAKE</span>
+        </div>
+      </section>
+
+      <div id="countdown" class="countdown" aria-live="assertive" hidden>3</div>
+      <div id="toast" class="toast" role="status" hidden></div>
+      <div class="bottom-caption" id="bottom-caption">
+        <span>BUILT FOR THE JOY OF DRIVING</span
+        ><span>3D ARCADE RACING <b>↗</b></span>
+      </div>
+
+      <section
+        id="touch-controls"
+        class="touch-controls"
+        aria-label="Touch driving controls"
+        hidden
+      >
+        <div class="touch-steering">
+          <button data-control="left" aria-label="Steer left">←</button
+          ><button data-control="right" aria-label="Steer right">→</button>
+        </div>
+        <div class="touch-pedals">
+          <button
+            data-control="handbrake"
+            class="drift-pedal"
+            aria-label="Handbrake"
+          >
+            DRIFT</button
+          ><button data-control="brake" aria-label="Brake or reverse">↓</button
+          ><button
+            data-control="accelerate"
+            class="accelerator"
+            aria-label="Accelerate"
+          >
+            ↑
+          </button>
+        </div>
+      </section>
+
+      <dialog id="pause-dialog" aria-labelledby="pause-title">
+        <div class="eyebrow">TAKE A BREATHER</div>
+        <h2 id="pause-title">PIT STOP.</h2>
+        <p>Your lap clock is paused. The track can wait.</p>
+        <button id="resume-button" class="primary-button">
+          BACK TO THE TRACK <span>↗</span></button
+        ><button id="restart-button" class="secondary-button">
+          Restart from the grid</button
+        ><button id="menu-button" class="text-button">Return to garage</button>
+        <div class="pause-help">
+          <span><kbd>W</kbd> / <kbd>↑</kbd> Accelerate</span
+          ><span><kbd>S</kbd> / <kbd>↓</kbd> Brake / reverse</span
+          ><span><kbd>A</kbd><kbd>D</kbd> Steer</span
+          ><span><kbd>R</kbd> Respawn</span>
+        </div>
+      </dialog>
+
+      <section
+        id="loading"
+        class="loading-screen"
+        aria-labelledby="loading-title"
+        aria-busy="true"
+      >
+        <div class="load-brand">APEX<span>ARCADE</span></div>
+        <div class="loading-content">
+          <div class="spinner" aria-hidden="true"></div>
+          <span class="eyebrow">GETTING THE TRACK READY</span>
+          <h2 id="loading-title">GOOD LINES<br />TAKE A MOMENT.</h2>
+          <div class="loading-bar"><span id="loading-progress"></span></div>
+          <p id="loading-message" role="status">Starting the engine…</p>
+          <button id="retry-button" class="primary-button" hidden>
+            TRY AGAIN ↗
+          </button>
+        </div>
+        <small>QATAR CIRCUIT · TIME ATTACK</small>
+      </section>
+      <noscript
+        ><div class="noscript">
+          JavaScript is required to drive. Enable JavaScript and reload this
+          page.
+        </div></noscript
+      >
+    </main>
+    <script>
+      window.__gameBooted = false;
+      window.__bootTimeout = setTimeout(() => {
+        if (!window.__gameBooted) {
+          document.getElementById("loading-title").textContent =
+            "THE ENGINE DIDN’T START.";
+          document.getElementById("loading-message").textContent =
+            "Check your internet connection. The game loads Three.js and Cannon-es from jsDelivr. Use a local HTTP server instead of opening index.html directly.";
+          document.getElementById("retry-button").hidden = false;
+          document.querySelector(".spinner").hidden = true;
+        }
+      }, 25000);
+      document.getElementById("retry-button").onclick = () => location.reload();
+    </script>
+    <script type="module" src="./js/main.js"></script>
+  </body>
+</html>

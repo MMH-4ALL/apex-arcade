@@ -1,0 +1,24 @@
+CAR ASSET PROVENANCE
+
+Source supplied locally by the user:
+  Cartoon Race Car - Darsche 91 R.zip
+
+This archive contained model_0.obj through model_10.obj, 992_DETAILS.png,
+and 992_shadow.png. It did not contain its referenced MTL files, author
+information, a license, or redistribution terms. No additional permission
+or license is implied by this conversion. Retain the source owner's
+applicable rights and attribution when publishing this asset.
+
+Browser preparation:
+- Original files were kept unchanged.
+- Removed degenerate triangles and welded duplicate geometry vertices.
+- Reduced the visible geometry to approximately 37,000 triangles.
+- Removed the baked shadow plane; the game renders real-time shadows.
+- Reconstructed the absent material definitions with orange paint,
+  dark trim, glass, silver wheel spokes, and lamp materials.
+- Normalized to approximately 4.6 meters long; Y-up and +Z forward.
+- Split the four wheels into separate named nodes for animation.
+- Exported self-contained GLB with no external texture dependencies.
+
+The original detail texture and baked shadow texture are not required by
+the reconstructed materials and are not included in the game payload.
