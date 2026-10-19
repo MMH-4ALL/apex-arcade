@@ -95,6 +95,7 @@ export class CarController {
     this.visual = new THREE.Group();
     this.visual.name = "player-car";
     this._fallbackWheels = [];
+    this._wheelSpin = 0;
     this._ownsModel = !model;
     this.visual.add(model || this._makeFallbackModel());
     scene.add(this.visual);
@@ -207,6 +208,7 @@ export class CarController {
     this.grounded = false;
     this.contactCount = 0;
     this.steering = 0;
+    this._wheelSpin = 0;
     this.slip = 0;
     this.drifting = false;
     this.clearInput();
@@ -286,6 +288,8 @@ export class CarController {
     this._normal.cross(this._forward, this._right);
     this._right.normalize();
     const longitudinalSpeed = body.velocity.dot(this._forward);
+    this._wheelSpin =
+      (this._wheelSpin + (longitudinalSpeed * dt) / 0.28) % (Math.PI * 2);
     const lateralSpeed = body.velocity.dot(this._right);
     const absoluteSpeed = Math.abs(longitudinalSpeed);
     const handbrake = this.enabled && this.controls.handbrake;
@@ -400,8 +404,8 @@ export class CarController {
       alpha,
     );
     for (const wheel of this._fallbackWheels) {
-      wheel.rotation.x = -this.body.position.z / 0.28;
-      if (wheel.userData.front) wheel.rotation.y = this.steering * 0.36;
+      wheel.spin.rotation.x = this._wheelSpin;
+      wheel.pivot.rotation.y = wheel.front ? this.steering * 0.36 : 0;
     }
   }
 
@@ -445,8 +449,9 @@ export class CarController {
       this.controls[action] = this.enabled && held.has(action) ? 1 : 0;
     }
     this.controls.handbrake = this.enabled && held.has("handbrake");
-    // A positive Y rotation turns +Z toward +X: positive steering is right.
-    this.controls.steering = this.controls.right - this.controls.left;
+    // With +Y up and +Z forward, the driver's right is local -X.
+    // Positive yaw turns toward +X (left); signed speed reverses yaw in reverse.
+    this.controls.steering = this.controls.left - this.controls.right;
     this.controls.throttle = this.controls.accelerate - this.controls.brake;
     this.controls.forward = this.controls.accelerate;
     this.controls.backward = this.controls.brake;
@@ -495,16 +500,17 @@ export class CarController {
       for (const x of [-0.88, 0.88]) {
         const pivot = new THREE.Group();
         pivot.position.set(x, -0.28, z);
-        pivot.userData.front = z > 0;
+        const spin = new THREE.Group();
         const tire = new THREE.Mesh(
           new THREE.CylinderGeometry(0.28, 0.28, 0.22, 12),
           dark,
         );
         tire.rotation.z = Math.PI / 2;
         tire.castShadow = true;
-        pivot.add(tire);
+        spin.add(tire);
+        pivot.add(spin);
         group.add(pivot);
-        this._fallbackWheels.push(pivot);
+        this._fallbackWheels.push({ pivot, spin, front: z > 0 });
       }
     }
     return group;

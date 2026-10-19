@@ -1,6 +1,6 @@
 {
   "name": "apex-arcade",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Buildless Three.js and Cannon-es arcade racing game",

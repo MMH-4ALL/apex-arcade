@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { CarController } from "./car.js";
+import { CarController } from "./car.js?v=1.0.1";
+import { WheelRig } from "./wheels.js?v=1.0.1";
 import { loadTrack, drawCircuit, TrackBroadphase } from "./track.js";
 import { RaceSession, formatTime } from "./race.js";
 import { EngineAudio } from "./audio.js";
@@ -26,8 +27,7 @@ let bestTime = readBest(),
   miniPosition,
   checkpointMarker;
 let touchOn = matchMedia("(pointer: coarse)").matches;
-let wheelNodes = [],
-  wheelAngle = 0;
+let wheelRig;
 const engineAudio = new EngineAudio();
 const cameraPosition = new THREE.Vector3();
 const cameraTarget = new THREE.Vector3();
@@ -132,8 +132,8 @@ async function init() {
           carMaterials.add(material);
         }
       }
-      if (mesh.name.startsWith("wheel_")) wheelNodes.push(mesh);
     });
+    wheelRig = new WheelRig(model);
     car = new CarController({ world, scene, model, spawn: track.spawn });
     car.onReset = respawn;
     race = new RaceSession(track.gates, { onLap: completeLap });
@@ -272,6 +272,7 @@ function updateTouch() {
 function startRace() {
   car.setEnabled(false);
   car.reset(track.spawn);
+  wheelRig.reset();
   for (let i = 0; i < 100; i++) {
     car.beforeStep(FIXED_STEP);
     world.step(FIXED_STEP);
@@ -326,6 +327,7 @@ function returnToMenu() {
   state = "menu";
   car.setEnabled(false);
   car.reset(track.spawn);
+  wheelRig.reset();
   $("race-hud").hidden = true;
   $("countdown").hidden = true;
   $("welcome").hidden = false;
@@ -341,6 +343,7 @@ function respawn() {
   if (state !== "racing") return;
   race.invalidate();
   car.reset(track.respawnAt(race.lastGate));
+  wheelRig.reset();
   onRoad = true;
   surfaceTime = 0;
   accumulator = 0;
@@ -461,11 +464,7 @@ function updateHUD() {
   miniPosition(car.body.position);
 }
 function animateWheels(dt) {
-  wheelAngle += (car.signedSpeed * dt) / 0.468;
-  wheelNodes.forEach((wheel) => {
-    wheel.rotation.x = wheelAngle;
-    wheel.rotation.y = wheel.name.includes("front") ? car.steering * 0.4 : 0;
-  });
+  wheelRig.update(dt, car.signedSpeed, car.steering);
 }
 
 function snapCamera(menu = false) {

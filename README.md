@@ -82,6 +82,7 @@ apex-arcade/
 │   ├── main.js                # Initialization, render loop, lighting, chase camera, UI
 │   ├── car.js                 # Cannon chassis, suspension, grip, steering, input
 │   ├── track.js               # GLTFLoader, transformed collision meshes, start line, map
+│   ├── wheels.js              # Independent steering pivots and axle-centered rolling
 │   ├── race.js                # Ordered checkpoint gates, lap validation and formatting
 │   └── audio.js               # Optional Web Audio engine synthesis
 ├── assets/
@@ -113,7 +114,7 @@ apex-arcade/
 
 Driving constants live near the top of `js/car.js`. `MAX_FORWARD_SPEED`, drive acceleration, suspension force, lateral grip, and the steering curve can be adjusted there. World gravity is configured in `js/main.js`.
 
-To replace the car, export a self-contained GLB at `assets/car/car.glb`, Y-up and +Z-forward, centered in X/Z with its tire bottoms at Y=0. The included car is 4.60 m long. The visual is placed 0.56 m below the chassis origin to match the suspension. Front/rear wheel nodes named `wheel_front_left`, `wheel_front_right`, `wheel_rear_left`, and `wheel_rear_right` rotate around local X. Recheck body dimensions and wheel probes when using a substantially different vehicle.
+To replace the car, export a self-contained GLB at `assets/car/car.glb`, Y-up and +Z-forward, centered in X/Z with its tire bottoms at Y=0. The included car is 4.60 m long. The visual is placed 0.56 m below the chassis origin to match the suspension. Steering is relative to the driver: with +Z forward and +Y up, right is local -X. Independent Y steering pivots and X rolling rotations keep the wheel axles level. Front/rear wheel nodes named `wheel_front_left`, `wheel_front_right`, `wheel_rear_left`, and `wheel_rear_right` rotate around local X. Recheck body dimensions and wheel probes when using a substantially different vehicle.
 
 To replace the track, export `assets/track/track.glb` and edit `assets/track/route.json`. Use meter units, Y-up, and the same world coordinates in both files. Name the driveable mesh `Road`, terrain `Terrain`, and barriers with `Barrier` in the name; alternatively set node `extras.collidable: true`. Provide ordered centerline points as `[x,y,z]`, without repeating the first point at the end, plus `name`, `length`, `roadWidth`, and a spawn object `{position:{x,y,z},heading}`. Heading is yaw in radians with 0 facing +Z. Place the chassis about 0.8 m above the road at spawn. Keep triangles reasonably sized for collision performance. This loader expects ordinary GLB geometry; Draco/KTX decoders are not configured.
 
@@ -128,7 +129,7 @@ npm test
 
 The optional test dependencies are pinned Three.js and Cannon-es packages; the game itself does not need npm. For the lap rules alone, `npm run test:race` needs no installation. Test browser layouts in portrait and landscape, exercise acceleration/brake/reverse, steering and Space, drive into a perimeter barrier, respawn, pause/resume, and complete the circuit before publishing any customized physics or replacement asset.
 
-The delivered version passes 19 automated tests, including the actual included road and barrier GLB geometry. Browser checks covered loading, touch acceleration, checkpoint advancement, pause, and responsive layouts from 320 to 1440 pixels. No browser console errors were observed during those checks. Device performance varies; a complete manual timed lap on every target device was not part of this verification.
+The delivered version passes 43 automated tests, including the actual included road and barrier GLB geometry. Browser checks covered loading, touch acceleration, checkpoint advancement, pause, and responsive layouts from 320 to 1440 pixels. No browser console errors were observed during those checks. Device performance varies; a complete manual timed lap on every target device was not part of this verification.
 
 ## Asset notes
 

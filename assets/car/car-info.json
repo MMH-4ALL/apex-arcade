@@ -278,5 +278,5 @@
     4.600429
   ],
   "source_scale": 0.02399598572589334,
-  "orientation": "Y up, +Z forward, +X right; wheel rotation axis X"
+  "orientation": "Y up, +Z forward; driver-right is -X; source left/right node names retained; wheel rotation axis X"
 }

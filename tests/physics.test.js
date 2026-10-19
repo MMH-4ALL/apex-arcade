@@ -8,12 +8,9 @@ import { CarController } from "../js/car.js";
 import { createMeshColliders, TrackBroadphase } from "../js/track.js";
 
 // The production modules need keyboard event targets, not a DOM or WebGL renderer.
-globalThis.window = { addEventListener() {}, removeEventListener() {} };
-globalThis.document = {
-  hidden: false,
-  addEventListener() {},
-  removeEventListener() {},
-};
+globalThis.window = new EventTarget();
+globalThis.document = Object.assign(new EventTarget(), { hidden: false });
+globalThis.Element = class Element {};
 const STEP = 1 / 60;
 
 function advance(world, car, seconds) {
@@ -24,7 +21,7 @@ function advance(world, car, seconds) {
   car.afterStep(1);
 }
 
-function flatWorld(height = 1.4) {
+function flatWorld(height = 1.4, heading = 0) {
   const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
   world.broadphase = new TrackBroadphase();
   const ground = new CANNON.Body({ mass: 0, shape: new CANNON.Plane() });
@@ -34,7 +31,7 @@ function flatWorld(height = 1.4) {
   const car = new CarController({
     world,
     scene: new THREE.Scene(),
-    spawn: { position: { x: 0, y: height, z: 0 }, heading: 0 },
+    spawn: { position: { x: 0, y: height, z: 0 }, heading },
   });
   car.setEnabled(true);
   return { world, car };
@@ -51,7 +48,10 @@ test("suspension settles, acceleration has a speed limit, steering and reverse w
   assert(car.speedKmh > 125 && car.speedKmh < 160);
   car.setTouchControl("right", true);
   advance(world, car, 1);
-  assert(car.body.position.x > 1, "right steering turns +Z toward +X");
+  assert(
+    car.body.position.x < -1,
+    "right steering turns +Z toward driver-right -X",
+  );
   car.setTouchControl("right", false);
   car.setTouchControl("accelerate", false);
   car.setTouchControl("brake", true);
@@ -66,6 +66,107 @@ test("suspension settles, acceleration has a speed limit, steering and reverse w
   car.destroy();
   car.destroy();
   assert.equal(world.bodies.includes(car.body), false);
+});
+
+for (const heading of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+  for (const travelSign of [1, -1]) {
+    for (const side of ["left", "right"]) {
+      test(`${side} steering is driver-relative at heading ${heading.toFixed(2)} while ${travelSign > 0 ? "forward" : "reversing"}`, () => {
+        const { world, car } = flatWorld(1.4, heading);
+        advance(world, car, 2);
+        const start = car.body.position.clone();
+        const initialForward = new CANNON.Vec3(
+          Math.sin(heading), 0, Math.cos(heading),
+        );
+        const driverRight = new CANNON.Vec3(
+          -Math.cos(heading), 0, Math.sin(heading),
+        );
+        const sideSign = side === "right" ? 1 : -1;
+        initialForward.scale(12 * travelSign, car.body.velocity);
+        car.setTouchControl(travelSign > 0 ? "accelerate" : "brake", true);
+        car.setTouchControl(side, true);
+        advance(world, car, 0.75);
+        const lateralTravel = car.body.position.vsub(start).dot(driverRight);
+        const noseTurn = car.body.quaternion
+          .vmult(CANNON.Vec3.UNIT_Z)
+          .dot(driverRight);
+        assert(
+          lateralTravel * sideSign > 0.3,
+          "the travel path bends toward the selected driver-relative side",
+        );
+        assert(
+          noseTurn * sideSign * travelSign > 0.1,
+          "reversing reverses nose yaw as real steering does",
+        );
+        assert(
+          car.signedSpeed * travelSign > 5,
+          "the car keeps its requested direction of travel",
+        );
+        car.destroy();
+      });
+    }
+  }
+}
+
+test("WASD, arrow keys and touch controls share the same steering convention", () => {
+  const { car } = flatWorld();
+  const keyboard = (type, code) => {
+    const event = new Event(type, { cancelable: true });
+    Object.defineProperty(event, "code", { value: code });
+    window.dispatchEvent(event);
+    assert(event.defaultPrevented);
+  };
+  for (const [action, codes, sign] of [
+    ["left", ["KeyA", "ArrowLeft"], 1],
+    ["right", ["KeyD", "ArrowRight"], -1],
+  ]) {
+    car.setTouchControl(action, true);
+    assert.equal(car.controls.steering, sign);
+    car.setTouchControl(action, false);
+    assert.equal(car.controls.steering, 0);
+    for (const code of codes) {
+      keyboard("keydown", code);
+      assert.equal(car.controls.steering, sign);
+      keyboard("keyup", code);
+      assert.equal(car.controls.steering, 0);
+    }
+  }
+  keyboard("keydown", "KeyA");
+  car.setTouchControl("steerRight", true);
+  assert.equal(
+    car.controls.steering, 0, "opposed keyboard/touch inputs cancel",
+  );
+  window.dispatchEvent(new Event("blur"));
+  assert.equal(car.controls.steering, 0);
+  assert.equal(car.controls.left, 0);
+  assert.equal(car.controls.right, 0);
+  car.destroy();
+});
+
+test("fallback wheels roll in either direction at any heading and front steering stays upright", () => {
+  const { world, car } = flatWorld(1.4, Math.PI / 2);
+  advance(world, car, 2);
+  const spawn = {
+    position: car.body.position.clone(),
+    heading: Math.PI / 2,
+  };
+  for (const travelSign of [1, -1]) {
+    car.reset(spawn);
+    car.body.velocity.set(3 * travelSign, 0, 0);
+    car.setTouchControl("right", true);
+    advance(world, car, 0.05);
+    assert(Math.abs(car.body.position.z) < 0.01, "driving east hardly changes world Z");
+    for (const wheel of car._fallbackWheels) {
+      assert(wheel.spin.rotation.x * travelSign > 0.2, "wheel roll follows local travel instead of world Z");
+      assert.equal(wheel.pivot.rotation.x, 0, "wheel roll cannot tilt its steering axis");
+      if (wheel.front) assert(wheel.pivot.rotation.y < 0, "front wheels steer to driver-right");
+      else assert.equal(wheel.pivot.rotation.y, 0, "rear wheels do not steer");
+      const angle = wheel.spin.rotation.x;
+      car.afterStep(0.5);
+      assert.equal(wheel.spin.rotation.x, angle, "extra render calls do not advance wheel roll");
+    }
+  }
+  car.destroy();
 });
 
 test("accelerating and steering in the air cannot create propulsion or yaw torque", () => {
