@@ -22,9 +22,13 @@ export class EngineAudio {
         .connect(this.context.destination);
       this.oscillator.start();
     }
-    this.enabled = !this.enabled;
-    if (this.enabled) await this.context.resume();
-    else this.gain.gain.setTargetAtTime(0, this.context.currentTime, 0.05);
+    if (this.enabled) {
+      this.gain.gain.setTargetAtTime(0, this.context.currentTime, 0.05);
+      this.enabled = false;
+    } else {
+      await this.context.resume();
+      this.enabled = true;
+    }
     return this.enabled;
   }
   update(speed, throttle, active) {
@@ -43,5 +47,8 @@ export class EngineAudio {
   destroy() {
     this.oscillator?.stop();
     this.context?.close();
+    this.enabled = false;
+    this.context = null;
+    this.oscillator = null;
   }
 }

@@ -5,7 +5,7 @@ import { CarController } from "./car.js?v=1.0.1";
 import { WheelRig } from "./wheels.js?v=1.0.1";
 import { loadTrack, drawCircuit, TrackBroadphase } from "./track.js";
 import { RaceSession, formatTime } from "./race.js";
-import { EngineAudio } from "./audio.js";
+import { EngineAudio } from "./audio.js?v=1.0.2";
 
 window.__gameBooted = true;
 clearTimeout(window.__bootTimeout);
@@ -231,6 +231,7 @@ function configureUI() {
   });
   window.addEventListener("keydown", (event) => {
     if (event.code === "Escape" && !event.repeat) {
+      event.preventDefault();
       if (state === "paused") resume();
       else if (state === "racing" || state === "countdown") pause();
     }
